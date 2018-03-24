@@ -1,0 +1,16 @@
+licznik 4-bitowy - ³adowanie, zliczanie w dó³ - kod NKB
+
+- wyœwietlanie: cztery diody LED,
+
+- sterowanie: dwa przyciski reaguj¹ce na wciœniêcie (CLK - aktywne zboczem; LD / CLR aktywne poziomem),
+
+- obs³uga urz¹dzeñ we/wy z u¿yciem uk³adów 573 / 574 zamontowanych w module Z80,
+
+- sterowanie zliczaniem z aktywnym oczekiwaniem i programow¹ eliminacja drgañ styków,
+
+- sterowanie ³adowaniem / zerowaniem z u¿yciem przerwania maskowalnego,
+
+- ³adowanie wartoœci¹ odczytywan¹ z nastawników hex,
+
+- ³adowanie / zerowanie maj¹ byæ obs³ugiwane jak ustawianie asynchroniczne w rzeczywistych licznikach, tzn. z blokowaniem zliczania.
+
