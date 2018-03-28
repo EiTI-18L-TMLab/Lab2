@@ -42,7 +42,6 @@ MAIN_LOOP: 		; początek głównej pętli
 	COUNTER_START:	; obsługa licznika
 		IN A, (1)
 		XOR E		; jeśli obsługuję zbocze narastające(E=1<<6), zaneguj odczytany stan CLK
-	IF_0:
 		BIT 6, A 	; stan przycisku CLK
 		JR Z, IF_1
 		LD C, D 	; jeśli przycisk niewciśnięty(stan wysoki), załaduj licznik debounce
