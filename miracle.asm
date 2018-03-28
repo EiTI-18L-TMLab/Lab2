@@ -39,43 +39,34 @@ MAIN:
 MAIN_LOOP: 		; początek głównej pętli
 
 	; początek obsługi licznika
-		LD A, E
-		AND 0xFF	; odświeżenie stanu flag
-		JR NZ, LOOP_POSITIVE ; wybranie obsługi konkretnego zbocza
-	LOOP_NEGATIVE:	; obsługa zbocza opadającego
+	COUNTER_START:	; obsługa licznika
 		IN A, (1)
+		XOR E		; jeśli obsługuję zbocze narastające(E=1<<6), zaneguj odczytany stan CLK
+	IF_0:
 		BIT 6, A 	; stan przycisku CLK
 		JR Z, IF_1
-		LD C, D 	; jeśli przycisk niewciśnięty, załaduj licznik debounce
+		LD C, D 	; jeśli przycisk niewciśnięty(stan wysoki), załaduj licznik debounce
 	IF_1:
 		JR NZ, IF_2
-		DEC C 		; jeśli przycisk wciśnięty, dekrementuj licznik debounce
+		DEC C 		; jeśli przycisk wciśnięty(stan niski), dekrementuj licznik debounce
 	IF_2:
 		LD A, C		; odświeżenie stanu flag
 		AND 0xFF
 		JR NZ, COUNTER_END ; jeśli licznik debounce niezerowy, koniec obsługi
+		; wykryto poprawne zbocze
+		LD A, E
+		AND 0x40
+		JR NZ, COUNTER_END ; zbocze narastające --> ABORT MISSION
 		DEC B		; wykryto poprawne zbocze opadające, akcja licznika
 		DI			; sekcja krytyczna
 		LD A, B		; 
 		AND 0Fh
 		OUT (1), A	; odświeżenie LED
 		EI			; koniec sekcji krytycznej
-		LD E, 1		; wybranie obsługi zbocza narastającego
-		JR COUNTER_END ; skok na koniec obsługi licznika
-	LOOP_POSITIVE:	; obsługa zbocza narastającego
-		IN A, (1)
-		BIT 6, A 	; stan przycisku CLK
-		JR NZ, IF_3
-		LD C, D		; jeśli przycisk wciśnięty, załaduj licznik debounce
-	IF_3:
-		JR Z, IF_4
-		DEC C		; jeśli przycisk niewciśnięty, dekrementuj licznik debounce
-	IF_4:
-		LD A, C		; odświeżenie stanu flag
-		AND 0xFF
-		JR NZ, COUNTER_END ; jeśli licznik debounce niezerowy, koniec obsługi
-		LD E, 0
-	COUNTER_END:	; koniec obsługi licznika
+		LD A, E		; zmiana obsługiwanego zbocza
+		XOR 0x40
+		LD E, A	
+	COUNTER_END: 	; koniec obsługi licznika
 
 	; dalsze operacje...	
 
