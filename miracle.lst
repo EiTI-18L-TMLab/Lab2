@@ -1,65 +1,85 @@
 # File miracle.asm
+0000			; Licznik 4-bit, kod NKB, ładowanie, zliczanie w dół 
+0000			; 
+0000			; Wykorzystanie rejestrów:  
+0000			;	B - zawiera wartość licznka,  
+0000			;	C - licznik debounce,  
+0000			;	D - ilość cykli debounce 
+0000			;	E - stan układu licznika, 1 dla obsługi zbocza narastającego, 0 dla obsługi zbocza opadającego; 
+0000			; 
+0000			; Podłączenie przycisków:  
+0000			;	CLK - bit 6 
+0000			;	!LD - bit 5 ( jednocześnie podłączony do !INT ) 
+0000			;	DANE -bity <0..3> 
+0000			; 
 0000			org 1800h 
 1800			START: 
-1800 31 ff 1f			LD SP, 0x1FFF 
-1803 18 5b			jr MAIN 
-1805 0x00...		ds 0x1838-$,0 ;org 1838h 
-1838			INTERRUPT: 
-1838 f5				PUSH AF 
-1839 db 01			IN A, (1) 
-183b e6 0f			AND 0Fh 
-183d 47				LD B, A 
-183e d3 01			OUT (1), A 
-1840 f1				POP AF 
+1800 31 ff 1f			LD SP, 0x1FFF ; Ustawienie wskaźnika stosu 
+1803 18 5b			jr MAIN  
+1805 0x00...		ds 0x1838-$,0 ; Umieszczenie procedury przerwania pod adresem 0x38 
+1838			INTERRUPT: 		; obsługa przerwania od przycisku !LD 
+1838 f5				PUSH AF 	; Zapisanie na stosie rejestrów A i F 
+1839 db 01			IN A, (1) 	; wczytanie danych do załadowania 
+183b e6 0f			AND 0Fh 	; wybranie istotnych danych 
+183d 47				LD B, A		; załadowanie licznika 
+183e d3 01			OUT (1), A	; odświeżenie LED 
+1840 f1				POP AF		; przywrócenie stosu i powrót z przerwania 
 1841 fb				EI 
 1842 c9				RET 
 1843 0x00...		ds 0x1860-$,0 ;org 1860h 
 1860			MAIN: 
-1860 db 01			IN A, (1) ; ŁADOWANIE Z WEJSCIA 
-1862 e6 0f			AND 0Fh 
-1864 47				LD B, A 
-1865 d3 01			OUT (1), A ; ODSWIEzENIE LED 
-1867 16 ff			LD D, 255 
+1860 db 01			IN A, (1) 	; inicjacja wartości licznika 
+1862 e6 0f			AND 0Fh		; wybranie istotnych danych 
+1864 47				LD B, A		; wpisanie początkowej wartości do licznika 
+1865 d3 01			OUT (1), A	; odświeżenie licznika 
+1867 16 ff			LD D, 255 	; ilość cykli debounce 
 1869 ed 56			IM 1 
 186b fb				EI	 
-186c 4a				LD C, D 
-186d db 01			IN A, (1) 
-186f cb 77			BIT 6, A ; PRZYCISK CLK 
-1871 1e 00			LD E, 0 
-1873			MAIN_LOOP: 
-1873 7b				LD A, E 
-1874 e6 ff			AND 0xFF 
-1876 20 18			JR NZ, LOOP_POSITIVE 
-1878			 
-1878			LOOP_NEGATIVE: 
-1878 db 01			IN A, (1) 
-187a cb 77			BIT 6, A ; PRZYCISK CLK	 
-187c 28 01			JR Z, IF_1 
-187e 4a				LD C, D 
-187f			IF_1: 
-187f 20 01			JR NZ, IF_2 
-1881 0d				DEC C 
-1882			IF_2: 
-1882 20 ef			JR NZ, MAIN_LOOP 
-1884 05				DEC B 
-1885 f3				DI 
-1886 78				LD A, B 
-1887 e6 0f			AND 0Fh 
-1889 d3 01			OUT (1), A 
-188b fb				EI 
-188c 1e 01			LD E, 1 
-188e 18 e3			JR MAIN_LOOP 
-1890			LOOP_POSITIVE: 
-1890 db 01			IN A, (1) 
-1892 cb 77			BIT 6, A ; PRZYCISK CLK	 
-1894 20 01			JR NZ, IF_3 
-1896 4a				LD C, D 
-1897			IF_3: 
-1897 28 01			JR Z, IF_4 
-1899 0d				DEC C 
-189a			IF_4: 
-189a 28 d7			JR Z, MAIN_LOOP 
-189c 1e 00			LD E, 0 
-189e 18 d3			JR MAIN_LOOP
+186c 4a				LD C, D 	; ustawienie licznika debounce 
+186d 1e 00			LD E, 0 	; wybrana obsługa zbocza opadającego 
+186f			MAIN_LOOP: 		; początek głównej pętli 
+186f			 
+186f				; początek obsługi licznika 
+186f 7b					LD A, E 
+1870 e6 ff				AND 0xFF	; odświeżenie stanu flag 
+1872 20 1b				JR NZ, LOOP_POSITIVE ; wybranie obsługi konkretnego zbocza 
+1874				LOOP_NEGATIVE:	; obsługa zbocza opadającego 
+1874 db 01				IN A, (1) 
+1876 cb 77				BIT 6, A 	; stan przycisku CLK 
+1878 28 01				JR Z, IF_1 
+187a 4a					LD C, D 	; jeśli przycisk niewciśnięty, załaduj licznik debounce 
+187b				IF_1: 
+187b 20 01				JR NZ, IF_2 
+187d 0d					DEC C 		; jeśli przycisk wciśnięty, dekrementuj licznik debounce 
+187e				IF_2: 
+187e 79					LD A, C		; odświeżenie stanu flag 
+187f e6 ff				AND 0xFF 
+1881 20 1d				JR NZ, COUNTER_END ; jeśli licznik debounce niezerowy, koniec obsługi 
+1883 05					DEC B		; wykryto poprawne zbocze opadające, akcja licznika 
+1884 f3					DI			; sekcja krytyczna 
+1885 78					LD A, B		;  
+1886 e6 0f				AND 0Fh 
+1888 d3 01				OUT (1), A	; odświeżenie LED 
+188a fb					EI			; koniec sekcji krytycznej 
+188b 1e 01				LD E, 1		; wybranie obsługi zbocza narastającego 
+188d 18 11				JR COUNTER_END ; skok na koniec obsługi licznika 
+188f				LOOP_POSITIVE:	; obsługa zbocza narastającego 
+188f db 01				IN A, (1) 
+1891 cb 77				BIT 6, A 	; stan przycisku CLK 
+1893 20 01				JR NZ, IF_3 
+1895 4a					LD C, D		; jeśli przycisk wciśnięty, załaduj licznik debounce 
+1896				IF_3: 
+1896 28 01				JR Z, IF_4 
+1898 0d					DEC C		; jeśli przycisk niewciśnięty, dekrementuj licznik debounce 
+1899				IF_4: 
+1899 79					LD A, C		; odświeżenie stanu flag 
+189a e6 ff				AND 0xFF 
+189c 20 02				JR NZ, COUNTER_END ; jeśli licznik debounce niezerowy, koniec obsługi 
+189e 1e 00				LD E, 0 
+18a0				COUNTER_END:	; koniec obsługi licznika 
+18a0			 
+18a0				; dalsze operacje...	 
+18a0			 
+18a0 18 cd		JR MAIN_LOOP ; powrót do początku głównej pętli
 # End of file miracle.asm
-18a0
+18a2
