@@ -14,3 +14,4 @@ licznik 4-bitowy - ³adowanie, zliczanie w dó³ - kod NKB
 
 - ³adowanie / zerowanie maj¹ byæ obs³ugiwane jak ustawianie asynchroniczne w rzeczywistych licznikach, tzn. z blokowaniem zliczania.
 
+dodatkowo zastanowic sie nad realizacja systemu 4-watkowego na z80
